@@ -17,10 +17,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-# Find packages (gRPC, Protocol Buffers, Redis)
+# Find packages (gRPC, Protocol Buffers, Redis, OpenSSL)
 find_package(Threads REQUIRED)
 find_package(Protobuf REQUIRED)
 find_package(gRPC REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 # Find hiredis (Redis client library)
 # Try pkg-config first, fall back to find_package or manual search

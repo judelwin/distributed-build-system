@@ -1,3 +1,32 @@
+// build.proto
+// Protocol Buffers definitions for gRPC communication between Coordinator and Worker nodes.
+// Defines the BuildService for submitting build tasks and retrieving results.
+
+syntax = "proto3";
+
+package buildsystem;
+
+// Build task request sent from Coordinator to Worker.
+message BuildTaskRequest {
+    string task_id = 1; // Unique identifier for the build task
+    string source_file = 2; // Path to the source file
+    repeated string dependencies = 3; // List of dependent files
+    string compile_flags = 4; // Compiler flags
+}
+
+// Build task response sent from Worker to Coordinator.
+message BuildTaskResponse {
+    string task_id = 1; // Echoes the build task ID
+    bool success = 2; // Build success status
+    string artifact_hash = 3; // Hash of the compiled artifact
+    string log = 4; // Build output or error log
+}
+
+// gRPC service for build coordination.
+service BuildService {
+    // Submits a build task to a worker node.
+    rpc SubmitTask(BuildTaskRequest) returns (BuildTaskResponse);
+}
 syntax = "proto3";
 
 package build;

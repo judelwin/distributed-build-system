@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     protobuf-compiler \
     protobuf-compiler-grpc \
     libhiredis-dev \
+    libopenssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
