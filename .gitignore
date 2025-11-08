@@ -1,0 +1,29 @@
+# Build artifacts
+/build/
+/bin/
+/target/
+
+# Dependencies
+node_modules/
+.vscode/
+.idea/
+
+# Environment and secrets
+.env
+*.log
+*.tmp
+*.swp
+
+# Generated data and benchmarks
+benchmarks/*.csv
+logs/
+__pycache__/
+*.class
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Ignore all markdown files except README.md
+*.md
+!README.md
