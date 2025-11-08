@@ -21,8 +21,8 @@ docker compose up --build
 - Outputs build metrics and cache statistics to CSV files in the `benchmarks/` directory.
 
 ## Project Structure
-- `coordinator/` — Schedules and dispatches build tasks
-- `worker/` — Receives and executes compilation jobs
+- `src/coordinator/` — Schedules and dispatches build tasks
+- `src/worker/` — Receives and executes compilation jobs
 - `proto/` — Protocol Buffers definitions for gRPC
 - `benchmarks/` — Scripts and results for performance evaluation
 - `Dockerfile`, `docker-compose.yml` — Containerization and orchestration

@@ -1,0 +1,11 @@
+{
+  "name": "distributed-build-system",
+  "version": "1.0.0",
+  "description": "Distributed build system using gRPC and Redis",
+  "dependencies": [
+    "grpc",
+    "protobuf",
+    "hiredis"
+  ]
+}
+
