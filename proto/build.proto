@@ -1,0 +1,7 @@
+// proto/build.proto
+// Protocol Buffers definitions for gRPC communication between Coordinator and Worker nodes.
+// Defines messages and services for submitting build tasks and retrieving results.
+
+syntax = "proto3";
+
+// Service and message definitions to be added.
