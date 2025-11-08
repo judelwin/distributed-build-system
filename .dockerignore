@@ -1,0 +1,38 @@
+# Build artifacts
+build/
+bin/
+target/
+*.o
+*.a
+*.so
+
+# Git
+.git/
+.gitignore
+
+# Documentation (not needed in container)
+*.md
+!README.md
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dependencies (will be installed in container)
+vcpkg_installed/
+
+# Logs and temporary files
+*.log
+*.tmp
+logs/
+__pycache__/
+
+# Benchmarks data
+benchmarks/*.csv
+
+# System files
+.DS_Store
+Thumbs.db
+

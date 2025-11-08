@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package build;
+
+// BuildService handles distributed compilation task submission and retrieval
+service BuildService {
+    // Submit a build task to a worker for execution
+    rpc SubmitTask(TaskRequest) returns (TaskResponse);
+    
+    // Get the current status of a submitted task
+    rpc GetStatus(StatusRequest) returns (StatusResponse);
+    
+    // Get the result of a completed task (artifacts, errors, etc.)
+    rpc GetResult(ResultRequest) returns (ResultResponse);
+}
+
+// Request to submit a build task
+message TaskRequest {
+    string task_id = 1;              // Unique identifier for the task
+    string content_hash = 2;         // Hash of source + deps + flags (for cache/idempotency)
+    repeated string source_files = 3; // Source files to compile
+    repeated string dependencies = 4; // Dependency file paths
+    repeated string compile_flags = 5; // Compilation flags (e.g., -O2, -std=c++17)
+    string output_path = 6;          // Desired output artifact path
+    int32 timeout_seconds = 7;       // Task timeout in seconds
+}
+
+// Response to task submission
+message TaskResponse {
+    bool accepted = 1;               // Whether task was accepted
+    string message = 2;              // Status message or error description
+    TaskStatus status = 3;           // Current task status
+}
+
+// Request to check task status
+message StatusRequest {
+    string task_id = 1;              // Task identifier
+}
+
+// Response with task status
+message StatusResponse {
+    string task_id = 1;
+    TaskStatus status = 2;
+    string message = 3;              // Optional status message
+    int32 progress_percent = 4;      // Progress percentage (0-100)
+}
+
+// Request to retrieve task result
+message ResultRequest {
+    string task_id = 1;              // Task identifier
+}
+
+// Response with task result
+message ResultResponse {
+    string task_id = 1;
+    TaskStatus status = 2;
+    bool success = 3;                // Whether compilation succeeded
+    string artifact_hash = 4;        // Hash of compiled artifact (for caching)
+    string artifact_path = 5;        // Path to compiled artifact
+    string error_message = 6;        // Error message if compilation failed
+    int64 build_time_ms = 7;         // Build time in milliseconds
+    int64 timestamp = 8;             // Completion timestamp
+}
+
+// Task status enumeration
+enum TaskStatus {
+    PENDING = 0;      // Task is queued but not started
+    IN_PROGRESS = 1;  // Task is currently being executed
+    COMPLETED = 2;    // Task completed successfully
+    FAILED = 3;       // Task failed with error
+    CANCELLED = 4;    // Task was cancelled
+    TIMEOUT = 5;      // Task exceeded timeout
+}
+

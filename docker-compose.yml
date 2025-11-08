@@ -1,0 +1,169 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - build-network
+
+  coordinator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: coordinator
+    command: ["./coordinator"]
+    depends_on:
+      redis:
+        condition: service_healthy
+      worker-1:
+        condition: service_started
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - COORDINATOR_PORT=50051
+    ports:
+      - "50051:50051"
+    volumes:
+      - ./benchmarks:/app/benchmarks
+      - ./logs:/app/logs
+    networks:
+      - build-network
+
+  worker-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: worker-1
+    command: ["./worker", "--port", "50052", "--host", "0.0.0.0"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - WORKER_ID=1
+      - WORKER_PORT=50052
+      - WORKER_HOST=worker-1
+    ports:
+      - "50052:50052"
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - build-network
+
+  worker-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: worker-2
+    command: ["./worker", "--port", "50053", "--host", "0.0.0.0"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - WORKER_ID=2
+      - WORKER_PORT=50053
+      - WORKER_HOST=worker-2
+    ports:
+      - "50053:50053"
+    profiles:
+      - 3-workers
+      - 5-workers
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - build-network
+
+  worker-3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: worker-3
+    command: ["./worker", "--port", "50054", "--host", "0.0.0.0"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - WORKER_ID=3
+      - WORKER_PORT=50054
+      - WORKER_HOST=worker-3
+    ports:
+      - "50054:50054"
+    profiles:
+      - 3-workers
+      - 5-workers
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - build-network
+
+  worker-4:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: worker-4
+    command: ["./worker", "--port", "50055", "--host", "0.0.0.0"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - WORKER_ID=4
+      - WORKER_PORT=50055
+      - WORKER_HOST=worker-4
+    ports:
+      - "50055:50055"
+    profiles:
+      - 5-workers
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - build-network
+
+  worker-5:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: worker-5
+    command: ["./worker", "--port", "50056", "--host", "0.0.0.0"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - WORKER_ID=5
+      - WORKER_PORT=50056
+      - WORKER_HOST=worker-5
+    ports:
+      - "50056:50056"
+    profiles:
+      - 5-workers
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - build-network
+
+volumes:
+  redis-data:
+
+networks:
+  build-network:
+    driver: bridge
+
