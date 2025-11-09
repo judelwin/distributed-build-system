@@ -12,6 +12,8 @@ target_link_libraries(worker
     gRPC::grpc++
     protobuf::libprotobuf
     Threads::Threads
+    OpenSSL::SSL
+    OpenSSL::Crypto
 )
 
 # Add Redis if found
