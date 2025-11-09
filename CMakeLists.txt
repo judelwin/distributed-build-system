@@ -57,6 +57,9 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 # Protocol Buffers generation
 add_subdirectory(proto)
 
+# Common library (shared types and utilities)
+add_subdirectory(src/common)
+
 # Coordinator service
 add_subdirectory(src/coordinator)
 

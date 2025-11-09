@@ -2,12 +2,16 @@
 
 set(WORKER_SOURCES
     main.cpp
+    build_service_impl.cpp
+    compiler.cpp
+    redis_client.cpp
 )
 
 add_executable(worker ${WORKER_SOURCES})
 
 target_link_libraries(worker
     PRIVATE
+    common_lib
     proto_lib
     gRPC::grpc++
     protobuf::libprotobuf
@@ -25,5 +29,5 @@ endif()
 
 target_include_directories(worker PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src/common
 )
-
