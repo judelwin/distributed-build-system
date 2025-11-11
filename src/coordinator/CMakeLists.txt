@@ -6,6 +6,7 @@ set(COORDINATOR_SOURCES
     grpc_client_pool.cpp
     redis_client.cpp
     fault_tolerance.cpp
+    metrics.cpp
 )
 
 add_executable(coordinator ${COORDINATOR_SOURCES})

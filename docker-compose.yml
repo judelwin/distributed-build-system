@@ -37,6 +37,7 @@ services:
     volumes:
       - ./benchmarks:/app/benchmarks
       - ./logs:/app/logs
+      - ./example_build_graph.json:/app/example_build_graph.json:ro
     networks:
       - build-network
 

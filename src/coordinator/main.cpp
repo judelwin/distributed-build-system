@@ -11,6 +11,7 @@
 #include "grpc_client_pool.h"
 #include "redis_client.h"
 #include "fault_tolerance.h"
+#include "metrics.h"
 #include "build_task.h"
 #include "dependency_graph.h"
 #include "build.grpc.pb.h"
@@ -30,12 +31,18 @@ public:
         : client_pool_(worker_addresses),
           redis_(redis_host, redis_port),
           fault_tolerance_(3) {}
+    
+    // Get metrics collector (for external access)
+    coordinator::MetricsCollector& get_metrics() { return metrics_; }
 
     // Schedule and execute build tasks
     void execute_build(const std::string& json_file) {
         auto tasks = build::parse_dependency_graph(json_file);
         
         std::cout << "Parsed " << tasks.size() << " tasks" << std::endl;
+
+        // Start metrics collection
+        metrics_.start_build(client_pool_.size());
 
         scheduler_.initialize(tasks);
         std::unordered_map<std::string, TaskStatus> task_status;
@@ -64,11 +71,16 @@ public:
                 if (redis_.is_available() && redis_.exists(task.content_hash)) {
                     std::cout << "Task " << task_id << " found in cache (hash: " 
                               << task.content_hash.substr(0, 8) << ")" << std::endl;
+                    metrics_.record_task_start(task_id);
+                    metrics_.record_task_complete(task_id, -1, 0, true);
                     scheduler_.mark_completed(task_id);
                     cached++;
                     completed++;
                     continue;
                 }
+                
+                // Record task start
+                metrics_.record_task_start(task_id);
 
                 // Check if task needs retry
                 bool needs_retry = fault_tolerance_.needs_retry(task_id);
@@ -84,6 +96,7 @@ public:
                     std::cout << "Retrying task " << task_id << " on worker " 
                               << worker_idx << " (attempt " 
                               << fault_tolerance_.get_retry_count(task_id) + 1 << ")" << std::endl;
+                    metrics_.record_task_retry(task_id);
                     retried++;
                 } else {
                     worker_idx = client_pool_.select_worker();
@@ -137,6 +150,7 @@ public:
                     fault_tolerance_.record_failure(task_id);
                     
                     if (fault_tolerance_.exceeded_max_retries(task_id)) {
+                        metrics_.record_task_failure(task_id);
                         task_status[task_id] = TaskStatus::FAILED;
                         scheduler_.mark_completed(task_id);
                         failed++;
@@ -158,6 +172,7 @@ public:
                         fault_tolerance_.record_failure(task_id);
                         
                         if (fault_tolerance_.exceeded_max_retries(task_id)) {
+                            metrics_.record_task_failure(task_id);
                             status = TaskStatus::TIMEOUT;
                             scheduler_.mark_completed(task_id);
                             failed++;
@@ -192,6 +207,7 @@ public:
                         fault_tolerance_.record_failure(task_id);
                         
                         if (fault_tolerance_.exceeded_max_retries(task_id)) {
+                            metrics_.record_task_failure(task_id);
                             status = TaskStatus::FAILED;
                             scheduler_.mark_completed(task_id);
                             failed++;
@@ -222,8 +238,15 @@ public:
                                       << ": " << e.what() << std::endl;
                         }
                         
+                        bool from_cache = false;
                         if (result_ok && result.success() && redis_.is_available()) {
                             redis_.set(tasks[task_id].content_hash, result.artifact_path());
+                        }
+                        
+                        // Record metrics for completed task
+                        if (result_ok && status == TaskStatus::COMPLETED) {
+                            metrics_.record_task_complete(task_id, worker_idx, 
+                                                         result.build_time_ms(), from_cache);
                         }
                         
                         if (status == TaskStatus::FAILED && 
@@ -233,9 +256,13 @@ public:
                             tasks_to_retry.push_back(task_id);
                             task_to_worker.erase(task_id);
                             task_status[task_id] = TaskStatus::PENDING;
+                            metrics_.record_task_retry(task_id);
                             retried++;
                         } else {
                             // Task completed (success or final failure)
+                            if (status == TaskStatus::FAILED) {
+                                metrics_.record_task_failure(task_id);
+                            }
                             scheduler_.mark_completed(task_id);
                             completed++;
                             task_to_worker.erase(task_id);
@@ -260,12 +287,14 @@ private:
     coordinator::GrpcClientPool client_pool_;
     coordinator::RedisClient redis_;
     coordinator::FaultTolerance fault_tolerance_;
+    coordinator::MetricsCollector metrics_;
 };
 
 int main(int argc, char** argv) {
     std::string json_file = "build_graph.json";
     std::string redis_host = "redis";
     int redis_port = 6379;
+    std::string csv_output;
     std::vector<std::string> worker_addresses;
 
     // Get worker addresses from environment (set by docker-compose)
@@ -306,6 +335,8 @@ int main(int argc, char** argv) {
             while (std::getline(ss, worker, ',')) {
                 worker_addresses.push_back(worker);
             }
+        } else if (arg == "--csv" && i + 1 < argc) {
+            csv_output = argv[++i];
         }
     }
 
@@ -322,6 +353,18 @@ int main(int argc, char** argv) {
     try {
         Coordinator coordinator(worker_addresses, redis_host, redis_port);
         coordinator.execute_build(json_file);
+        
+        // Export metrics to CSV if requested
+        if (!csv_output.empty()) {
+            auto metrics = coordinator.get_metrics().finish_build();
+            std::vector<coordinator::BuildMetrics> metrics_list = {metrics};
+            if (coordinator::MetricsCollector::export_to_csv(csv_output, metrics_list, 
+                                                             worker_addresses.size())) {
+                std::cout << "Metrics exported to " << csv_output << std::endl;
+            } else {
+                std::cerr << "Failed to export metrics to " << csv_output << std::endl;
+            }
+        }
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
